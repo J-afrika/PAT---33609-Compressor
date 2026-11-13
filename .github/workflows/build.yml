@@ -1,0 +1,22 @@
+name: Build VST3 installer (Windows)
+on: [push, workflow_dispatch]
+jobs:
+  win:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Configure
+        run: cmake -B build -G "Visual Studio 17 2022" -A x64
+      - name: Build
+        run: cmake --build build --config Release --parallel
+      - name: Install Inno Setup
+        run: choco install innosetup -y --no-progress
+      - name: Build installer
+        run: '& "C:\Program Files (x86)\Inno Setup 6\ISCC.exe" installer\PA3609.iss'
+      - uses: actions/upload-artifact@v4
+        with:
+          name: Paragon-PA3609-VST3-Windows
+          path: |
+            installer/Output/Paragon-PA3609-VST3-Setup.exe
+            build/PA3609_artefacts/Release/VST3/Paragon PA-3609.vst3
+            installer/Install-VST3-Manual.bat
