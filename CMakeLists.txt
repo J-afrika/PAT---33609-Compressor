@@ -20,6 +20,11 @@ juce_add_plugin(PA3609
   VST3_CATEGORIES Fx Dynamics
   COPY_PLUGIN_AFTER_BUILD FALSE)
 
+juce_add_binary_data(PA3609Assets SOURCES
+  Assets/knob.png
+  Assets/panel.png
+  Assets/screw.png)
+
 target_sources(PA3609 PRIVATE
   Source/PluginProcessor.cpp
   Source/PluginEditor.cpp)
@@ -28,5 +33,5 @@ target_compile_definitions(PA3609 PUBLIC
   JUCE_WEB_BROWSER=0 JUCE_USE_CURL=0 JUCE_VST3_CAN_REPLACE_VST2=0)
 
 target_link_libraries(PA3609
-  PRIVATE juce::juce_audio_utils
+  PRIVATE PA3609Assets juce::juce_audio_utils
   PUBLIC juce::juce_recommended_config_flags juce::juce_recommended_lto_flags)

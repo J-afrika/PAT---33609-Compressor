@@ -1,49 +1,49 @@
 #include "PluginEditor.h"
+#include "BinaryData.h"
 using namespace juce;
 
 namespace
 {
     const Colour kTx (0xffe9e6dd), kAmber (0xffe8a24a);
     const int W = 1240, H = 548;
+
+    struct Preset { const char* name; std::vector<std::pair<const char*, float>> v; };
+    // keys l_* / c_* without a trailing 1/2 are applied to both channels
+    const std::vector<Preset>& presets()
+    {
+        static const std::vector<Preset> p = {
+            { "Init", {} },
+            { "Drum bus",       { {"l_thr",11}, {"l_rec",1}, {"l_fast",1}, {"c_thr",-8}, {"c_rec",1}, {"c_gain",5}, {"c_ratio",2}, {"c_fast",0}, {"sch",80}, {"drive",60}, {"mix",80} } },
+            { "Vocal (opto)",   { {"l_thr",13}, {"l_rec",2}, {"l_fast",0}, {"c_thr",-10}, {"c_rec",4}, {"c_gain",6}, {"c_ratio",1}, {"c_fast",0}, {"opto",1}, {"hf",30}, {"sch",100}, {"drive",40} } },
+            { "Mix glue",       { {"l_thr",14}, {"l_rec",3}, {"l_fast",0}, {"c_thr",-4}, {"c_rec",4}, {"c_gain",3}, {"c_ratio",1}, {"c_fast",0}, {"sch",100}, {"drive",30} } },
+            { "Parallel smash", { {"l_thr",9}, {"l_rec",0}, {"l_fast",1}, {"c_thr",-18}, {"c_rec",1}, {"c_gain",12}, {"c_ratio",4}, {"c_fast",1}, {"mix",35}, {"drive",70}, {"sch",120} } },
+            { "M/S master",     { {"l_thr",14}, {"l_rec",3}, {"l_fast",0}, {"c_thr",-4}, {"c_rec",4}, {"c_gain",2}, {"c_ratio",1}, {"c_fast",0}, {"c_thr2",-6}, {"c_gain2",1}, {"ms",1}, {"link",0}, {"sch",60}, {"drive",25} } }
+        };
+        return p;
+    }
 }
 
 //==============================================================================
+PanelLNF::PanelLNF()
+{
+    knobImg = ImageCache::getFromMemory (BinaryData::knob_png, BinaryData::knob_pngSize);
+}
+
 void PanelLNF::drawRotarySlider (Graphics& g, int x, int y, int w, int h, float pos,
                                  float a0, float a1, Slider&)
 {
-    auto r = Rectangle<float> ((float) x, (float) y, (float) w, (float) h).reduced (2.f);
-    auto c = r.getCentre();
-    const float R = jmin (r.getWidth(), r.getHeight()) / 2.f;
+    auto r = Rectangle<float> ((float) x, (float) y, (float) w, (float) h);
+    g.setImageResamplingQuality (Graphics::highResamplingQuality);
+    g.drawImage (knobImg, r, RectanglePlacement::centred);
 
-    g.setColour (Colours::black.withAlpha (.5f));
-    g.fillEllipse (Rectangle<float> (R * 1.7f, R * 1.7f).withCentre (c.translated (0.f, 3.f)));
-
-    const float sr = R * .88f;
-    g.setGradientFill (ColourGradient (Colour (0xffe0e0da), c.x - sr, c.y - sr,
-                                       Colour (0xff77776f), c.x + sr, c.y + sr, false));
-    g.fillEllipse (Rectangle<float> (sr * 2, sr * 2).withCentre (c));
-    g.setColour (Colours::black.withAlpha (.35f));
-    for (int i = 0; i < 40; ++i)
-    {
-        const float a = (float) i * MathConstants<float>::twoPi / 40.f;
-        g.drawLine (c.x + std::sin (a) * sr * .88f, c.y - std::cos (a) * sr * .88f,
-                    c.x + std::sin (a) * sr,        c.y - std::cos (a) * sr, 1.f);
-    }
-
-    const float cr = R * .64f;
-    auto cap = Rectangle<float> (cr * 2, cr * 2).withCentre (c);
-    g.setGradientFill (ColourGradient (Colour (0xff5fcdf2), c.x - cr * .4f, c.y - cr * .5f,
-                                       Colour (0xff0c5c88), c.x + cr, c.y + cr, true));
-    g.fillEllipse (cap);
-    g.setColour (Colour (0xffd3d6d8));
-    g.drawEllipse (cap, 2.f);
-    g.setColour (Colours::white.withAlpha (.25f));
-    g.fillEllipse (Rectangle<float> (cr * .9f, cr * .5f).withCentre (c.translated (-cr * .15f, -cr * .45f)));
-
+    const auto c = r.getCentre();
+    const float capR = r.getWidth() * .30f;
     const float a = a0 + pos * (a1 - a0);
     Path p;
-    p.addRoundedRectangle (-1.6f, -cr + 2.f, 3.2f, cr * .55f, 1.5f);
-    g.setColour (Colours::white);
+    p.addRoundedRectangle (-1.7f, -capR + 2.5f, 3.4f, capR * .62f, 1.6f);
+    g.setColour (Colours::black.withAlpha (.45f));
+    g.fillPath (p, AffineTransform::rotation (a).translated (c.x + 1.f, c.y + 1.5f));
+    g.setColour (Colour (0xfff4f4f0));
     g.fillPath (p, AffineTransform::rotation (a).translated (c.x, c.y));
 }
 
@@ -56,7 +56,7 @@ void PanelLNF::drawToggleButton (Graphics& g, ToggleButton& b, bool, bool)
     {
         g.setColour (Colours::black);
         g.fillRoundedRectangle (r, r.getHeight() / 2);
-        g.setColour (on ? kAmber : Colour (0xff2b3743));
+        g.setColour (on ? kAmber : Colour (0xff222d38));
         g.fillRoundedRectangle (r.reduced (1.f), r.getHeight() / 2);
         g.setColour (on ? Colours::black : kTx);
         g.setFont (FontOptions (9.f, Font::bold));
@@ -65,10 +65,10 @@ void PanelLNF::drawToggleButton (Graphics& g, ToggleButton& b, bool, bool)
     }
 
     auto barrel = Rectangle<float> (20.f, 34.f).withCentre (r.getCentre());
-    g.setColour (Colours::black.withAlpha (.5f));
+    g.setColour (Colours::black.withAlpha (.55f));
     g.fillRoundedRectangle (barrel.translated (0.f, 2.f), 5.f);
-    ColourGradient bg (Colour (0xff101010), barrel.getX(), 0.f, Colour (0xff101010), barrel.getRight(), 0.f, false);
-    bg.addColour (.5, Colour (0xff585858));
+    ColourGradient bg (Colour (0xff0c0c0c), barrel.getX(), 0.f, Colour (0xff0c0c0c), barrel.getRight(), 0.f, false);
+    bg.addColour (.45, Colour (0xff5a5a5a));
     g.setGradientFill (bg);
     g.fillRoundedRectangle (barrel, 5.f);
     g.setColour (Colours::black);
@@ -76,7 +76,7 @@ void PanelLNF::drawToggleButton (Graphics& g, ToggleButton& b, bool, bool)
 
     const float ly = on ? barrel.getY() + 2.f : barrel.getBottom() - 17.f;
     auto lever = Rectangle<float> (14.f, 15.f).withCentre ({ barrel.getCentreX(), ly + 7.5f });
-    g.setColour (Colours::black.withAlpha (.55f));
+    g.setColour (Colours::black.withAlpha (.6f));
     g.fillRoundedRectangle (lever.translated (0.f, on ? 3.f : -2.f), 4.f);
     ColourGradient lg (Colour (0xff9c9c96), lever.getX(), 0.f, Colour (0xff8a8a84), lever.getRight(), 0.f, false);
     lg.addColour (.4, Colour (0xfffafaf5));
@@ -88,6 +88,8 @@ void PanelLNF::drawToggleButton (Graphics& g, ToggleButton& b, bool, bool)
 PA3609Editor::PA3609Editor (PA3609Processor& p) : AudioProcessorEditor (&p), proc (p)
 {
     setLookAndFeel (&lnf);
+    panelTex = ImageCache::getFromMemory (BinaryData::panel_png, BinaryData::panel_pngSize);
+    screwImg = ImageCache::getFromMemory (BinaryData::screw_png, BinaryData::screw_pngSize);
     setSize (W, H);
 
     // sections ---------------------------------------------------------------
@@ -134,6 +136,27 @@ PA3609Editor::PA3609Editor (PA3609Processor& p) : AudioProcessorEditor (&p), pro
     addKnob ("mix", "mix (parallel)", 890, by);
     addKnob ("outG", "output", 1040, by);
 
+    // preset bar --------------------------------------------------------------
+    StringArray names;
+    for (auto& pr : presets()) names.add (pr.name);
+    presetBox.addItemList (names, 1);
+    presetBox.setSelectedId (1, dontSendNotification);
+    presetBox.setBounds (440, 12, 230, 24);
+    prevBtn.setBounds (408, 12, 26, 24);
+    nextBtn.setBounds (676, 12, 26, 24);
+    for (Component* c : { (Component*) &presetBox, (Component*) &prevBtn, (Component*) &nextBtn })
+        addAndMakeVisible (c);
+    presetBox.onChange = [this] { applyPreset (presetBox.getSelectedItemIndex()); };
+    prevBtn.onClick = [this]
+    {
+        const int n = presetBox.getNumItems();
+        presetBox.setSelectedItemIndex ((presetBox.getSelectedItemIndex() + n - 1) % n, sendNotification);
+    };
+    nextBtn.onClick = [this]
+    {
+        presetBox.setSelectedItemIndex ((presetBox.getSelectedItemIndex() + 1) % presetBox.getNumItems(), sendNotification);
+    };
+
     // L/R link: register every per-channel parameter (ids like l_thr1 / c_gain2)
     for (auto* par : p.getParameters())
         if (auto* pid = dynamic_cast<AudioProcessorParameterWithID*> (par))
@@ -155,6 +178,40 @@ PA3609Editor::~PA3609Editor()
     setLookAndFeel (nullptr);
 }
 
+void PA3609Editor::applyPreset (int index)
+{
+    if (index < 0 || index >= (int) presets().size()) return;
+    ignore = true;                                   // don't let L/R link interfere while loading
+    auto setPlain = [this] (const String& id, float v)
+    {
+        if (auto* par = proc.apvts.getParameter (id))
+        {
+            par->beginChangeGesture();
+            par->setValueNotifyingHost (par->convertTo0to1 (v));
+            par->endChangeGesture();
+        }
+    };
+    for (auto* par : proc.getParameters())
+        if (auto* pid = dynamic_cast<RangedAudioParameter*> (par))
+            if (pid->paramID != "bypass")
+            {
+                pid->beginChangeGesture();
+                pid->setValueNotifyingHost (pid->getDefaultValue());
+                pid->endChangeGesture();
+            }
+
+    for (auto& kv : presets()[(size_t) index].v)
+    {
+        const String id (kv.first);
+        const bool perChannel = (id.startsWith ("l_") || id.startsWith ("c_")) && ! (id.endsWith ("1") || id.endsWith ("2"));
+        if (perChannel) { setPlain (id + "1", kv.second); setPlain (id + "2", kv.second); }
+        else            setPlain (id, kv.second);
+    }
+    ignore = false;
+    for (auto& id : linkIds)
+        prevNorm[id] = proc.apvts.getParameter (id)->getValue();
+}
+
 void PA3609Editor::addKnob (const String& id, const String& label, int cx, int cy)
 {
     auto* k = knobs.add (new Knob());
@@ -167,7 +224,7 @@ void PA3609Editor::addKnob (const String& id, const String& label, int cx, int c
         for (int i = 0; i < 5; ++i) k->ticks.add (String (roundToInt (r.start + (float) i * (r.end - r.start) / 4.f)));
     }
     k->s.setRotaryParameters (MathConstants<float>::pi * 1.25f, MathConstants<float>::pi * 2.75f, true);
-    k->s.setBounds (cx - 28, cy - 28, 56, 56);
+    k->s.setBounds (cx - 32, cy - 32, 64, 64);
     addAndMakeVisible (k->s);
     k->att = std::make_unique<AudioProcessorValueTreeState::SliderAttachment> (proc.apvts, id, k->s);
 }
@@ -175,7 +232,7 @@ void PA3609Editor::addKnob (const String& id, const String& label, int cx, int c
 void PA3609Editor::addSw (const String& id, const String& top, const String& bot, int cx, int cy)
 {
     auto* s = sws.add (new Sw());
-    s->top = top; s->bot = bot; s->c = { cx, cy };
+    s->id = id; s->top = top; s->bot = bot; s->c = { cx, cy };
     s->b.setBounds (cx - 14, cy - 22, 28, 44);
     addAndMakeVisible (s->b);
     s->att = std::make_unique<AudioProcessorValueTreeState::ButtonAttachment> (proc.apvts, id, s->b);
@@ -184,6 +241,7 @@ void PA3609Editor::addSw (const String& id, const String& top, const String& bot
 void PA3609Editor::addPill (const String& id, int cx, int cy)
 {
     auto* s = sws.add (new Sw());
+    s->id = id;
     s->b.setComponentID ("pill");
     s->b.setBounds (cx - 28, cy - 8, 56, 16);
     addAndMakeVisible (s->b);
@@ -204,79 +262,126 @@ String PA3609Editor::readout (const Knob& k) const
 }
 
 //==============================================================================
+void PA3609Editor::drawLed (Graphics& g, Point<float> p, bool on, Colour c)
+{
+    if (on)
+    {
+        g.setGradientFill (ColourGradient (c.withAlpha (.75f), p.x, p.y, c.withAlpha (0.f), p.x + 11.f, p.y, true));
+        g.fillEllipse (Rectangle<float> (22.f, 22.f).withCentre (p));
+    }
+    auto core = Rectangle<float> (8.f, 8.f).withCentre (p);
+    g.setColour (Colours::black);
+    g.fillEllipse (core.expanded (1.5f));
+    g.setColour (on ? c.brighter (.5f) : Colour (0xff3a2a24));
+    g.fillEllipse (core);
+    g.setColour (Colours::white.withAlpha (on ? .55f : .15f));
+    g.fillEllipse (Rectangle<float> (3.f, 2.f).withCentre ({ p.x - 1.2f, p.y - 1.8f }));
+}
+
 void PA3609Editor::drawMeter (Graphics& g, Rectangle<float> r, float v, const String& title)
 {
     g.setColour (kTx);
     g.setFont (FontOptions (10.5f, Font::bold));
-    g.drawText (title, r.toNearestInt().withHeight (14).translated (0, -17), Justification::centred);
+    g.drawText (title, r.toNearestInt().withHeight (14).translated (0, -18), Justification::centred);
 
-    g.setColour (Colour (0xff0a0a0a));
+    // housing below the glass
+    auto hs = Rectangle<float> (r.getX() - 3.f, r.getBottom() + 1.f, r.getWidth() + 6.f, 40.f);
+    g.setGradientFill (ColourGradient (Colour (0xff25282b), 0.f, hs.getY(), Colour (0xff0b0c0d), 0.f, hs.getBottom(), false));
+    g.fillRoundedRectangle (hs, 3.f);
+    g.setColour (Colour (0xff000000));
+    g.fillEllipse (Rectangle<float> (13.f, 13.f).withCentre ({ hs.getCentreX(), hs.getCentreY() + 2.f }));
+    g.setColour (Colour (0xff6b6d70));
+    g.drawLine (hs.getCentreX() - 4.f, hs.getCentreY() + 6.f, hs.getCentreX() + 4.f, hs.getCentreY() - 2.f, 1.4f);
+
+    // bezel + cream VU face
+    g.setColour (Colour (0xff050505));
     g.fillRoundedRectangle (r.expanded (3.f), 4.f);
-    g.setColour (Colour (0xff14181a));
+    g.setGradientFill (ColourGradient (Colour (0xfff2eedd), r.getX(), r.getY(), Colour (0xffd6d0b8), r.getRight(), r.getBottom(), false));
     g.fillRoundedRectangle (r, 3.f);
 
     g.saveState();
     g.reduceClipRegion (r.toNearestInt());
     const float s = r.getWidth() / 200.f;
     const float px = r.getX() + 100.f * s, py = r.getY() + 150.f * s;
-    g.setColour (Colour (0xffdddddd));
-    g.setFont (FontOptions (9.f, Font::plain));
+    g.setFont (FontOptions (9.f, Font::bold));
     for (int t = 0; t <= 20; t += 4)
     {
         const float a = degreesToRadians (-38.f + 76.f * (float) t / 20.f);
         const float sn = std::sin (a), cs = -std::cos (a);
-        g.drawLine (px + sn * 98.f * s, py + cs * 98.f * s, px + sn * 108.f * s, py + cs * 108.f * s, 1.5f);
-        g.drawText (String (t), Rectangle<int> (12, 12).withCentre ({ (int) (px + sn * 86.f * s), (int) (py + cs * 86.f * s) }),
+        g.setColour (t >= 16 ? Colour (0xffb02a20) : Colour (0xff1a1a1a));
+        g.drawLine (px + sn * 98.f * s, py + cs * 98.f * s, px + sn * 108.f * s, py + cs * 108.f * s, 1.6f);
+        g.drawText (String (t), Rectangle<int> (14, 12).withCentre ({ (int) (px + sn * 86.f * s), (int) (py + cs * 86.f * s) }),
                     Justification::centred);
     }
+    g.setColour (Colour (0xff1a1a1a));
     g.drawText ("dB", r.toNearestInt().withY ((int) (r.getY() + 70.f * s)).withHeight (12), Justification::centred);
 
     const float a = degreesToRadians (-38.f + 76.f * jlimit (0.f, 22.f, v) / 20.f);
-    g.setColour (Colours::black.withAlpha (.6f));
-    g.drawLine (px + 2.f, py + 2.f, px + std::sin (a) * 112.f * s + 2.f, py - std::cos (a) * 112.f * s + 2.f, 2.f);
-    g.setColour (kAmber);
-    g.drawLine (px, py, px + std::sin (a) * 112.f * s, py - std::cos (a) * 112.f * s, 2.f);
+    g.setColour (Colours::black.withAlpha (.25f));
+    g.drawLine (px + 3.f, py + 2.f, px + std::sin (a) * 112.f * s + 3.f, py - std::cos (a) * 112.f * s + 2.f, 2.f);
+    g.setColour (Colour (0xff121212));
+    g.drawLine (px, py, px + std::sin (a) * 112.f * s, py - std::cos (a) * 112.f * s, 1.8f);
 
-    g.setGradientFill (ColourGradient (Colours::white.withAlpha (.22f), r.getX(), r.getY(),
-                                       Colours::white.withAlpha (.02f), r.getRight(), r.getBottom(), false));
+    // glass reflection
+    g.setGradientFill (ColourGradient (Colours::white.withAlpha (.35f), r.getX(), r.getY(),
+                                       Colours::white.withAlpha (.0f), r.getCentreX(), r.getBottom(), false));
+    Path glare;
+    glare.startNewSubPath (r.getX(), r.getY());
+    glare.lineTo (r.getRight(), r.getY());
+    glare.lineTo (r.getX(), r.getCentreY() + 8.f);
+    glare.closeSubPath();
+    g.fillPath (glare);
+    g.setGradientFill (ColourGradient (Colours::transparentBlack, r.getCentreX(), r.getCentreY(),
+                                       Colours::black.withAlpha (.35f), r.getX(), r.getY(), true));
     g.fillRect (r);
     g.restoreState();
 }
 
 void PA3609Editor::paint (Graphics& g)
 {
-    // faceplate
-    g.setGradientFill (ColourGradient (Colour (0xff4a5b6b), 0.f, 0.f, Colour (0xff2f3b47), 0.f, (float) H, false));
+    // faceplate: tiled brushed-navy texture + vignette
+    g.setTiledImageFill (panelTex, 0, 0, 1.f);
     g.fillAll();
-    g.setColour (Colours::white.withAlpha (.18f));
+    g.setGradientFill (ColourGradient (Colours::transparentBlack, W * .5f, H * .5f,
+                                       Colours::black.withAlpha (.5f), 0.f, 0.f, true));
+    g.fillAll();
+    g.setColour (Colours::white.withAlpha (.2f));
     g.fillRect (0, 0, W, 2);
+    g.setColour (Colours::black.withAlpha (.6f));
+    g.fillRect (0, H - 3, W, 3);
 
     // rack ears + screws
     for (int side = 0; side < 2; ++side)
     {
         const int ex = side == 0 ? 6 : W - 30;
-        g.setColour (Colours::white.withAlpha (.06f));
+        g.setColour (Colours::white.withAlpha (.07f));
         g.fillRoundedRectangle ((float) ex, 8.f, 24.f, (float) H - 16.f, 3.f);
+        g.setColour (Colours::black.withAlpha (.35f));
+        g.drawRoundedRectangle ((float) ex, 8.f, 24.f, (float) H - 16.f, 3.f, 1.f);
         for (int yy : { 60, H - 60 })
         {
-            g.setColour (Colour (0xff0b0d0e));
+            g.setColour (Colour (0xff070809));
             g.fillEllipse (Rectangle<float> (16.f, 11.f).withCentre ({ (float) ex + 12.f, (float) yy }));
-            g.setColour (Colour (0xffcfd3d6));
+            g.setColour (Colour (0xffb9bec2));
             g.drawEllipse (Rectangle<float> (18.f, 13.f).withCentre ({ (float) ex + 12.f, (float) yy }), 1.5f);
         }
+        g.setImageResamplingQuality (Graphics::highResamplingQuality);
+        g.drawImage (screwImg, Rectangle<float> ((float) ex + 1.f, (float) H / 2 - 11.f, 22.f, 22.f));
     }
 
     // header
-    g.setColour (kAmber);
+    g.setColour (Colours::black.withAlpha (.5f));
     g.setFont (FontOptions (22.f, Font::bold));
+    g.drawText ("PARAGON AUDIO", 41, 10, 240, 30, Justification::left);
+    g.setColour (kAmber);
     g.drawText ("PARAGON AUDIO", 40, 8, 240, 30, Justification::left);
-    g.setColour (kTx);
-    g.setFont (FontOptions (12.f, Font::bold));
-    g.drawText ("PA-3609  DISCRETE PRECISION STEREO LIMITER / COMPRESSOR", 250, 8, 520, 30, Justification::left);
+    g.setColour (kTx.withAlpha (.8f));
+    g.setFont (FontOptions (11.f, Font::bold));
+    g.drawText ("PA-3609", 275, 8, 100, 30, Justification::left);
 
     auto bar = [&] (float x, float y, float w, float db, const String& t)
     {
-        g.setColour (Colour (0xff0d1012)); g.fillRect (x, y, w, 10.f);
+        g.setColour (Colour (0xff050607)); g.fillRoundedRectangle (x - 1.f, y - 1.f, w + 2.f, 12.f, 2.f);
         const float f = jlimit (0.f, 1.f, (db + 60.f) / 60.f) * w;
         g.setColour (db > -3 ? Colour (0xffe0473c) : db > -12 ? Colour (0xffe8c24a) : Colour (0xff3fbf6f));
         g.fillRect (x, y, f, 10.f);
@@ -287,15 +392,16 @@ void PA3609Editor::paint (Graphics& g)
     bar (900.f, 18.f, 130.f, fall (dispIn,  proc.inPk.load()),  "in");
     bar (1070.f, 18.f, 130.f, fall (dispOut, proc.outPk.load()), "out");
 
-    // sections
+    // sections: recessed, bevelled
     for (auto& s : secs)
     {
         auto r = s.r.toFloat();
-        g.setGradientFill (ColourGradient (Colours::white.withAlpha (.05f), 0.f, r.getY(),
-                                           Colours::black.withAlpha (.14f), 0.f, r.getBottom(), false));
-        g.fillRoundedRectangle (r, 2.f);
-        g.setColour (Colour (0xffaeb4ab));
-        g.drawRoundedRectangle (r, 2.f, 1.f);
+        g.setColour (Colours::black.withAlpha (.22f));
+        g.fillRoundedRectangle (r, 3.f);
+        g.setColour (Colours::black.withAlpha (.55f));
+        g.drawRoundedRectangle (r, 3.f, 1.5f);
+        g.setColour (Colour (0xff9aa3ab).withAlpha (.65f));
+        g.drawRoundedRectangle (r.reduced (1.f), 3.f, 1.f);
         g.setColour (kTx);
         g.setFont (FontOptions (12.f, Font::bold));
         g.drawText (s.name, s.r.withTrimmedTop (s.r.getHeight() - 24), Justification::centred);
@@ -306,31 +412,38 @@ void PA3609Editor::paint (Graphics& g)
     {
         g.setColour (kTx);
         g.setFont (FontOptions (10.5f, Font::bold));
-        g.drawText (k->label, k->c.x - 50, k->c.y - 64, 100, 13, Justification::centred);
+        g.drawText (k->label, k->c.x - 50, k->c.y - 66, 100, 13, Justification::centred);
 
-        g.setFont (FontOptions (9.f, Font::plain));
+        g.setFont (FontOptions (9.f, Font::bold));
         const int n = k->ticks.size();
         for (int i = 0; i < n; ++i)
         {
             const float t = n > 1 ? (float) i / (float) (n - 1) : 0.f;
             const float a = MathConstants<float>::pi * 1.25f + t * MathConstants<float>::pi * 1.5f;
-            const int tx = k->c.x + (int) std::lround (std::sin (a) * 40.f);
-            const int ty = k->c.y - (int) std::lround (std::cos (a) * 40.f);
+            const int tx = k->c.x + (int) std::lround (std::sin (a) * 41.f);
+            const int ty = k->c.y - (int) std::lround (std::cos (a) * 41.f);
             g.drawText (k->ticks[i], tx - 17, ty - 6, 34, 12, Justification::centred);
         }
         g.setFont (FontOptions (10.f, Font::plain));
-        g.setColour (kTx.withAlpha (.85f));
-        g.drawText (readout (*k), k->c.x - 45, k->c.y + 36, 90, 12, Justification::centred);
+        g.setColour (kTx.withAlpha (.8f));
+        g.drawText (readout (*k), k->c.x - 45, k->c.y + 37, 90, 12, Justification::centred);
     }
 
-    // switch labels
+    // switch labels + LEDs
     g.setFont (FontOptions (10.f, Font::bold));
-    g.setColour (kTx);
     for (auto* s : sws)
     {
         if (s->b.getComponentID() == "pill") continue;
+        g.setColour (kTx);
         g.drawText (s->top, s->c.x - 28, s->c.y - 36, 56, 12, Justification::centred);
         g.drawText (s->bot, s->c.x - 28, s->c.y + 25, 56, 12, Justification::centred);
+        if (s->id == "bypass" || s->id == "stereo" || s->id == "ms")
+        {
+            const bool on = s->b.getToggleState();
+            const Colour col = s->id == "bypass" ? Colour (0xffff3b2a) : Colour (0xffffa63a);
+            drawLed (g, { (float) s->c.x + 26.f, (float) s->c.y - 12.f }, on, col);
+            drawLed (g, { (float) s->c.x + 26.f, (float) s->c.y + 12.f }, ! on, col);
+        }
     }
 
     // needle meters

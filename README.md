@@ -44,3 +44,8 @@ by the same amount (offsets are kept; switches mirror). The editor must be open 
 The editor is a fixed-layout skinned faceplate (blue knobs with tick scales, chrome toggle levers,
 LINK pills, two needle gain-reduction meters, in/out peak bars). All drawing is in Source/PluginEditor.cpp
 (PanelLNF + PA3609Editor::paint), so colours and positions are easy to tweak.
+
+## Artwork
+The knob, faceplate texture and screw bitmaps in Assets/ are rendered procedurally by tools/make_assets.py
+(original artwork; no third-party graphics). They are embedded with juce_add_binary_data. To change the
+look, edit the script (colours, knurl count, lighting) and re-run it, or replace the PNGs with hand-made renders.

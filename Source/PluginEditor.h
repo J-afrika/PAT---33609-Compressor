@@ -3,13 +3,16 @@
 #include <map>
 #include <vector>
 
-// Custom drawing: skirted blue knobs, chrome toggle levers, LINK pills
+// Custom drawing: bitmap knobs, chrome toggle levers, LINK pills
 class PanelLNF : public juce::LookAndFeel_V4
 {
 public:
+    PanelLNF();
     void drawRotarySlider (juce::Graphics&, int x, int y, int w, int h, float pos,
                            float a0, float a1, juce::Slider&) override;
     void drawToggleButton (juce::Graphics&, juce::ToggleButton&, bool, bool) override;
+private:
+    juce::Image knobImg;
 };
 
 class PA3609Editor : public juce::AudioProcessorEditor,
@@ -36,7 +39,7 @@ private:
     {
         juce::ToggleButton b;
         std::unique_ptr<juce::AudioProcessorValueTreeState::ButtonAttachment> att;
-        juce::String top, bot;
+        juce::String id, top, bot;
         juce::Point<int> c;
     };
     struct Sec { juce::Rectangle<int> r; juce::String name; };
@@ -45,6 +48,8 @@ private:
     void addSw (const juce::String& id, const juce::String& top, const juce::String& bot, int cx, int cy);
     void addPill (const juce::String& id, int cx, int cy);
     void drawMeter (juce::Graphics&, juce::Rectangle<float>, float v, const juce::String& title);
+    void drawLed (juce::Graphics&, juce::Point<float>, bool on, juce::Colour);
+    void applyPreset (int index);
     juce::String readout (const Knob&) const;
 
     void timerCallback() override { repaint(); }
@@ -53,6 +58,9 @@ private:
 
     PanelLNF lnf;
     PA3609Processor& proc;
+    juce::Image panelTex, screwImg;
+    juce::ComboBox presetBox;
+    juce::TextButton prevBtn { "<" }, nextBtn { ">" };
     juce::OwnedArray<Knob> knobs;
     juce::OwnedArray<Sw> sws;
     std::vector<Sec> secs;
