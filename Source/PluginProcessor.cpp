@@ -58,6 +58,7 @@ AudioProcessorValueTreeState::ParameterLayout PA3609Processor::layout()
         B ("c_fast" + s, "Comp " + s + " Fast", true);
         B ("c_in" + s, "Comp " + s + " In", true);
     }
+    B ("lk_lim", "Link Limit L/R", true);  B ("lk_cmp", "Link Comp L/R", true);
     B ("bypass", "Bypass", false);   B ("stereo", "Stereo Mode", true);
     B ("ms", "Mid/Side", false);     F ("link", "Link %", 0, 100, 100);
     B ("opto", "Opto Mode", false);  B ("olim", "Opto Limit", false);

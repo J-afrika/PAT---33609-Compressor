@@ -21,3 +21,26 @@ build\PA3609_artefacts\Release\VST3\ into C:\Program Files\Common Files\VST3\ by
 - Unsigned installers trigger Windows SmartScreen; sign with a code-signing certificate before shipping.
 - The UI is a functional parameter panel; the skinned faceplate from the web version is the next step.
 - 64-bit VST3 only. No oversampling yet (the saturation can alias at high drive).
+
+## Code signing (removes the SmartScreen "unknown publisher" warning)
+Signing needs a code-signing certificate issued to Paragon Audio; it cannot be generated for you.
+1. Buy an OV/EV code-signing certificate (e.g. from SSL.com, Sectigo, DigiCert), or for an open-source
+   project apply to SignPath Foundation (free signing for OSS) or use Azure Trusted Signing.
+2. Export the certificate with its private key as a .pfx file.
+3. In PowerShell: [Convert]::ToBase64String([IO.File]::ReadAllBytes("cert.pfx")) | Set-Clipboard
+4. GitHub repo -> Settings -> Secrets and variables -> Actions -> add:
+   - WIN_CERT_PFX_BASE64  (the base64 text)
+   - WIN_CERT_PASSWORD    (the .pfx password)
+5. Re-run the workflow. It then signs the plugin DLL and the installer (SHA-256, timestamped).
+Without the secrets the workflow still builds, just unsigned. Never commit the .pfx to the repo.
+Note: OV certificates build SmartScreen reputation over time; EV certificates get it immediately.
+
+## L/R link
+Two switches in the control grid, "Link Limit L/R" and "Link Comp L/R" (both on by default).
+With a link on, moving a control on channel 1 or 2 moves the matching control on the other channel
+by the same amount (offsets are kept; switches mirror). The editor must be open for linking to act.
+
+## Interface
+The editor is a fixed-layout skinned faceplate (blue knobs with tick scales, chrome toggle levers,
+LINK pills, two needle gain-reduction meters, in/out peak bars). All drawing is in Source/PluginEditor.cpp
+(PanelLNF + PA3609Editor::paint), so colours and positions are easy to tweak.

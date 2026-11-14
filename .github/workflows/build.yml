@@ -3,16 +3,57 @@ on: [push, workflow_dispatch]
 jobs:
   win:
     runs-on: windows-2022
+    env:
+      # Signing runs only if you add these two repository secrets (see README).
+      HAS_CERT: ${{ secrets.WIN_CERT_PFX_BASE64 != '' }}
     steps:
       - uses: actions/checkout@v4
+
       - name: Configure
         run: cmake -B build -G "Visual Studio 17 2022" -A x64
       - name: Build
         run: cmake --build build --config Release --parallel
+
+      - name: Locate signtool and decode certificate
+        if: env.HAS_CERT == 'true'
+        shell: pwsh
+        run: |
+          $st = Get-ChildItem "C:\Program Files (x86)\Windows Kits\10\bin\*\x64\signtool.exe" | Sort-Object FullName | Select-Object -Last 1
+          "SIGNTOOL=$($st.FullName)" | Out-File -Append $env:GITHUB_ENV
+          [IO.File]::WriteAllBytes("$env:RUNNER_TEMP\cert.pfx", [Convert]::FromBase64String($env:PFX))
+        env:
+          PFX: ${{ secrets.WIN_CERT_PFX_BASE64 }}
+
+      - name: Sign plugin binary
+        if: env.HAS_CERT == 'true'
+        shell: pwsh
+        run: |
+          $bin = Get-ChildItem "build\PA3609_artefacts\Release\VST3\Paragon PA-3609.vst3\Contents\x86_64-win\*.vst3" | Select-Object -First 1
+          & $env:SIGNTOOL sign /f "$env:RUNNER_TEMP\cert.pfx" /p $env:PFX_PASS /fd SHA256 /tr http://timestamp.digicert.com /td SHA256 /d "Paragon PA-3609" $bin.FullName
+          & $env:SIGNTOOL verify /pa $bin.FullName
+        env:
+          PFX_PASS: ${{ secrets.WIN_CERT_PASSWORD }}
+
       - name: Install Inno Setup
         run: choco install innosetup -y --no-progress
       - name: Build installer
         run: '& "C:\Program Files (x86)\Inno Setup 6\ISCC.exe" installer\PA3609.iss'
+
+      - name: Sign installer
+        if: env.HAS_CERT == 'true'
+        shell: pwsh
+        run: |
+          $exe = "installer\Output\Paragon-PA3609-VST3-Setup.exe"
+          & $env:SIGNTOOL sign /f "$env:RUNNER_TEMP\cert.pfx" /p $env:PFX_PASS /fd SHA256 /tr http://timestamp.digicert.com /td SHA256 /d "Paragon PA-3609 Installer" $exe
+          & $env:SIGNTOOL verify /pa $exe
+        env:
+          PFX_PASS: ${{ secrets.WIN_CERT_PASSWORD }}
+
+      - name: Remove certificate from runner
+        if: always()
+        shell: pwsh
+        run: Remove-Item "$env:RUNNER_TEMP\cert.pfx" -ErrorAction SilentlyContinue
+
       - uses: actions/upload-artifact@v4
         with:
           name: Paragon-PA3609-VST3-Windows
